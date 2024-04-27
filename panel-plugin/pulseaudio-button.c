@@ -72,21 +72,24 @@ static const char *recording_icons[] = {
 
 
 
-static void                 pulseaudio_button_finalize        (GObject            *object);
-static gboolean             pulseaudio_button_button_press    (GtkWidget          *widget,
-                                                               GdkEventButton     *event);
-static gboolean             pulseaudio_button_scroll_event    (GtkWidget          *widget,
-                                                               GdkEventScroll     *event);
-static gboolean             pulseaudio_query_tooltip          (GtkWidget          *widget,
-                                                               gint                x,
-                                                               gint                y,
-                                                               gboolean            keyboard_mode,
-                                                               GtkTooltip         *tooltip);
-static void                 pulseaudio_button_menu_deactivate (PulseaudioButton   *button,
-                                                               GtkMenuShell       *menu);
-static void                 pulseaudio_button_update_icons    (PulseaudioButton   *button);
-static void                 pulseaudio_button_update          (PulseaudioButton   *button,
-                                                               gboolean            force_update);
+static void                 pulseaudio_button_finalize                   (GObject            *object);
+static gboolean             pulseaudio_button_button_press               (GtkWidget          *widget,
+                                                                          GdkEventButton     *event);
+static gboolean             pulseaudio_button_scroll_event               (GtkWidget          *widget,
+                                                                          GdkEventScroll     *event);
+static gboolean             pulseaudio_query_tooltip                     (GtkWidget          *widget,
+                                                                          gint                x,
+                                                                          gint                y,
+                                                                          gboolean            keyboard_mode,
+                                                                          GtkTooltip         *tooltip);
+static void                 pulseaudio_button_menu_deactivate            (PulseaudioButton   *button,
+                                                                          GtkMenuShell       *menu);
+static void                 pulseaudio_button_update_icons               (PulseaudioButton   *button);
+static void                 pulseaudio_button_update                     (PulseaudioButton   *button,
+                                                                          gboolean            force_update);
+static GdkPixbuf *          pulseaudio_button_adjust_sink_icon_by_volume (PulseaudioButton   *button,
+                                                                          gdouble             volume,
+                                                                          const gchar        *icon_name);
 
 
 
@@ -109,6 +112,7 @@ struct _PulseaudioButton
   gint                  icon_size;
   const gchar          *icon_name;
   const gchar          *recording_icon_name;
+  gdouble               last_volume;
 
   PulseaudioMenu       *menu;
 
@@ -402,6 +406,97 @@ pulseaudio_button_update_icons (PulseaudioButton *button)
 
 
 
+static GdkPixbuf *
+pulseaudio_button_adjust_sink_icon_by_volume (PulseaudioButton *button,
+                                              gdouble           volume,
+                                              const gchar      *icon_name)
+{
+  g_return_val_if_fail (IS_PULSEAUDIO_BUTTON (button), NULL);
+
+  GtkIconInfo *icon_info;
+  GdkRGBA      color;
+  GdkPixbuf   *icon_pixbuf;
+  int          rowstride;
+  int          wave_radius_full;
+  int          wave_radius;
+  int          wave_radius_squared;
+  int          c_x, c_y;
+  int          start_x;
+  int          border_size;
+  int          base_grey;
+  guchar      *pixels;
+  guchar      *pixel;
+  int          x, y;
+  guchar       grey;
+  double       dist_sq;
+  double       dist_oob;
+
+  icon_info = gtk_icon_theme_lookup_icon (gtk_icon_theme_get_default (),
+                                          icon_name,
+                                          button->icon_size,
+                                          GTK_ICON_LOOKUP_FORCE_SIZE);
+  gdk_rgba_parse (&color, "#bebebe");
+
+  icon_pixbuf = gdk_pixbuf_copy (
+      gtk_icon_info_load_symbolic (icon_info, &color, NULL, NULL, NULL, NULL, NULL));
+  g_object_unref (icon_info);
+
+  rowstride = gdk_pixbuf_get_rowstride (icon_pixbuf);
+
+  // Width of sound waves, measured as 9 out of 16 pixels in reference SVG
+  wave_radius_full = (int) (button->icon_size * (9.0 / 16.0));
+  wave_radius = (int) (wave_radius_full * (volume * 0.9 + 0.15));
+  c_x = (int) (button->icon_size / 2.75);
+  c_y = (int) (button->icon_size / 2);
+
+  start_x = button->icon_size - wave_radius_full;
+
+  wave_radius_squared = wave_radius * wave_radius;
+  border_size = wave_radius_squared / 3;
+  base_grey = 0xBE;
+
+  pixels = gdk_pixbuf_get_pixels (icon_pixbuf);
+  for (y = 0; y < button->icon_size; y++)
+    {
+      for (x = start_x; x < button->icon_size; x++)
+        {
+          pixel = pixels + y * rowstride + x * 4;
+
+          if (pixel[3] == 0)
+            continue;
+
+          grey = pixel[0];
+
+          // If at full volume, skip distance calculation; the whole sound wave is white
+          if (volume >= 1.0)
+            grey = 0xFF;
+          else
+            {
+              dist_sq = pow (x - c_x, 2) + pow (y - c_y, 2);
+              if (dist_sq <= wave_radius_squared)
+                // Make sound waves brighter as volume increases
+                grey = base_grey + (int) ((0xFF - base_grey) * volume);
+              else
+                {
+                  dist_oob = dist_sq - wave_radius_squared;
+                  grey *=  0.5 + (
+                    dist_oob < border_size
+                      ? 0.5 * (border_size - dist_oob) / border_size
+                      : 0
+                  );
+                }
+            }
+
+
+          pixel[0] = pixel[1] = pixel[2] = grey;
+        }
+    }
+
+  return icon_pixbuf;
+}
+
+
+
 static void
 pulseaudio_button_update (PulseaudioButton *button,
                           gboolean          force_update)
@@ -414,6 +509,7 @@ pulseaudio_button_update (PulseaudioButton *button,
   gboolean     recording;
   const gchar *icon_name;
   const gchar *recording_icon_name;
+  GdkPixbuf   *icon_pixbuf;
 
   g_return_if_fail (IS_PULSEAUDIO_BUTTON (button));
   g_return_if_fail (IS_PULSEAUDIO_VOLUME (button->volume));
@@ -431,10 +527,6 @@ pulseaudio_button_update (PulseaudioButton *button,
     icon_name = icons[V_MUTED];
   else if (volume <= 0.0)
     icon_name = icons[V_MUTED];
-  else if (volume <= 0.3)
-    icon_name = icons[V_LOW];
-  else if (volume <= 0.7)
-    icon_name = icons[V_MEDIUM];
   else
     icon_name = icons[V_HIGH];
 
@@ -454,11 +546,20 @@ pulseaudio_button_update (PulseaudioButton *button,
   if (!force_update)
     gtk_tooltip_trigger_tooltip_query (gdk_display_get_default ());
 
-  if (force_update || icon_name != button->icon_name)
+  if (force_update || volume != button->last_volume || icon_name != button->icon_name)
     {
+      button->last_volume = volume;
       button->icon_name = icon_name;
-      gtk_image_set_from_icon_name (GTK_IMAGE (button->image), icon_name, GTK_ICON_SIZE_BUTTON);
-      gtk_image_set_pixel_size (GTK_IMAGE (button->image), button->icon_size);
+
+      if (volume > 0.0)
+        {
+          icon_pixbuf = pulseaudio_button_adjust_sink_icon_by_volume (button, volume, icon_name);
+          gtk_image_set_from_pixbuf (GTK_IMAGE (button->image), icon_pixbuf);
+          g_object_unref (icon_pixbuf);
+        } else {
+          gtk_image_set_from_icon_name (GTK_IMAGE (button->image), icon_name, GTK_ICON_SIZE_BUTTON);
+          gtk_image_set_pixel_size (GTK_IMAGE (button->image), button->icon_size);
+        }
     }
 
   if (force_update || recording_icon_name != button->recording_icon_name)
