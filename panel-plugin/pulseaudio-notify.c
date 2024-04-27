@@ -44,18 +44,24 @@
 
 #include "pulseaudio-notify.h"
 
-#define V_MUTED  0
-#define V_LOW    1
-#define V_MEDIUM 2
-#define V_HIGH   3
+#define V_MUTED       0
+#define V_HALF_LOW    1
+#define V_LOW         2
+#define V_HALF_MEDIUM 2
+#define V_MEDIUM      3
+#define V_HALF_HIGH   4
+#define V_HIGH        5
 
 
 
 /* Icons for different volume levels */
 static const char *icons[] = {
   "audio-volume-muted-symbolic",
+  "audio-volume-half-low-symbolic",
   "audio-volume-low-symbolic",
+  "audio-volume-half-medium-symbolic",
   "audio-volume-medium-symbolic",
+  "audio-volume-half-high-symbolic",
   "audio-volume-high-symbolic",
   NULL
 };
@@ -64,7 +70,10 @@ static const char *icons[] = {
 static const char *icons_mic[] = {
   "microphone-sensitivity-muted-symbolic",
   "microphone-sensitivity-low-symbolic",
+  "microphone-sensitivity-low-symbolic",
   "microphone-sensitivity-medium-symbolic",
+  "microphone-sensitivity-medium-symbolic",
+  "microphone-sensitivity-high-symbolic",
   "microphone-sensitivity-high-symbolic",
   NULL
 };
@@ -208,10 +217,16 @@ pulseaudio_notify_notify (PulseaudioNotify *notify, gboolean mic)
     icon = icons_array[V_MUTED];
   else if (volume <= 0.0)
     icon = icons_array[V_MUTED];
+  else if (volume <= 0.15)
+    icon = icons_array[V_HALF_LOW];
   else if (volume <= 0.3)
     icon = icons_array[V_LOW];
+  else if (volume <= 0.5)
+    icon = icons_array[V_HALF_MEDIUM];
   else if (volume <= 0.7)
     icon = icons_array[V_MEDIUM];
+  else if (volume <= 0.9)
+    icon = icons_array[V_HALF_HIGH];
   else
     icon = icons_array[V_HIGH];
 

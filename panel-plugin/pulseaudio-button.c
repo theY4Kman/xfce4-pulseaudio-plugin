@@ -45,6 +45,7 @@
 #include "pulseaudio-menu.h"
 #include "pulseaudio-mpris.h"
 #include "pulseaudio-button.h"
+#include "resources.h"
 
 #define V_MUTED  0
 #define V_LOW    1
@@ -165,6 +166,7 @@ static void pulseaudio_set_recording_indicator_state (PulseaudioButton *button)
 static void
 pulseaudio_button_init (PulseaudioButton *button)
 {
+  GtkIconTheme *theme;
   GtkStyleContext *context;
   GtkCssProvider *css_provider;
   GtkWidget *box;
@@ -177,9 +179,6 @@ pulseaudio_button_init (PulseaudioButton *button)
   gtk_widget_set_name (GTK_WIDGET (button), "pulseaudio-button");
   gtk_widget_set_has_tooltip (GTK_WIDGET (button), TRUE);
 
-  /* Preload icons */
-  g_signal_connect (G_OBJECT (button), "style-updated", G_CALLBACK (pulseaudio_button_update_icons), button);
-
   /* Setup Gtk style */
   context = gtk_widget_get_style_context (GTK_WIDGET (button));
   css_provider = gtk_css_provider_new ();
@@ -187,6 +186,14 @@ pulseaudio_button_init (PulseaudioButton *button)
   gtk_style_context_add_provider (context,
                                   GTK_STYLE_PROVIDER (css_provider),
                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+  /* Preload icons */
+  g_resources_register (resources_get_resource ());
+  theme = gtk_icon_theme_get_for_screen (gtk_style_context_get_screen (context));
+  gtk_icon_theme_add_resource_path (theme,
+                                    "/org/xfce/panel-plugins/pulseaudio/icons/scalable/status");
+
+  g_signal_connect (G_OBJECT (button), "style-updated", G_CALLBACK (pulseaudio_button_update_icons), button);
 
   /* Intercept scroll events */
   gtk_widget_add_events (GTK_WIDGET (button), GDK_SCROLL_MASK);

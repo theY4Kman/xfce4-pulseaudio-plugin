@@ -2,8 +2,11 @@
 
 iconsdir = $(datadir)/icons/hicolor/scalable/status
 icons_DATA =								\
+    audio-volume-half-high-symbolic.svg     \
     audio-volume-high-symbolic.svg          \
+    audio-volume-half-low-symbolic.svg      \
     audio-volume-low-symbolic.svg           \
+    audio-volume-half-medium-symbolic.svg   \
     audio-volume-medium-symbolic.svg        \
     audio-volume-muted-symbolic.svg         \
     microphone-sensitivity-high-symbolic.svg          \

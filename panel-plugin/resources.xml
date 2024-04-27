@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/xfce/panel-plugins/pulseaudio">
+    <file>icons/scalable/status/audio-volume-half-high-symbolic.svg</file>
+    <file>icons/scalable/status/audio-volume-half-low-symbolic.svg</file>
+    <file>icons/scalable/status/audio-volume-half-medium-symbolic.svg</file>
+    <file>icons/scalable/status/audio-volume-high-symbolic.svg</file>
+    <file>icons/scalable/status/audio-volume-low-symbolic.svg</file>
+    <file>icons/scalable/status/audio-volume-medium-symbolic.svg</file>
+    <file>icons/scalable/status/audio-volume-muted-symbolic.svg</file>
+    <file>icons/scalable/status/microphone-sensitivity-high-symbolic.svg</file>
+    <file>icons/scalable/status/microphone-sensitivity-low-symbolic.svg</file>
+    <file>icons/scalable/status/microphone-sensitivity-medium-symbolic.svg</file>
+    <file>icons/scalable/status/microphone-sensitivity-muted-symbolic.svg</file>
+  </gresource>
+</gresources>

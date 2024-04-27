@@ -16,8 +16,23 @@ plugindir = \
 plugin_LTLIBRARIES = \
 	libpulseaudio-plugin.la
 
+resources_SOURCES = \
+	../icons/scalable/status/audio-volume-half-high-symbolic.svg \
+	../icons/scalable/status/audio-volume-half-low-symbolic.svg \
+	../icons/scalable/status/audio-volume-half-medium-symbolic.svg \
+	../icons/scalable/status/audio-volume-high-symbolic.svg \
+	../icons/scalable/status/audio-volume-low-symbolic.svg \
+	../icons/scalable/status/audio-volume-medium-symbolic.svg \
+	../icons/scalable/status/audio-volume-muted-symbolic.svg \
+	../icons/scalable/status/microphone-sensitivity-high-symbolic.svg \
+	../icons/scalable/status/microphone-sensitivity-low-symbolic.svg \
+	../icons/scalable/status/microphone-sensitivity-medium-symbolic.svg \
+	../icons/scalable/status/microphone-sensitivity-muted-symbolic.svg
+
 libpulseaudio_built_sources = \
-	pulseaudio-dialog_ui.h
+	pulseaudio-dialog_ui.h \
+	resources.c \
+	resources.h
 
 libpulseaudio_plugin_la_SOURCES = \
 	$(libpulseaudio_built_sources) \
@@ -108,6 +123,7 @@ $(desktop_DATA): $(desktop_in_files) Makefile
 	$(AM_V_GEN)$(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
+	resources.xml \
 	pulseaudio-dialog.glade \
 	$(desktop_in_in_files)
 
@@ -121,6 +137,12 @@ BUILT_SOURCES = \
 
 DISTCLEANFILES += \
 	$(libpulseaudio_built_sources)
+
+resources.h: resources.xml $(resources_SOURCES)
+	$(AM_V_GEN) glib-compile-resources --generate-header --sourcedir=.. --target=$@ $<
+
+resources.c: resources.xml $(resources_SOURCES)
+	$(AM_V_GEN) glib-compile-resources --generate-source --sourcedir=.. --target=$@ $<
 
 pulseaudio-dialog_ui.h: pulseaudio-dialog.glade
 	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=pulseaudio_dialog_ui $< >$@
